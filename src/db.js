@@ -138,6 +138,13 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cuit_allow TEXT[];
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS usuario TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS ip TEXT;
 
+CREATE TABLE IF NOT EXISTS settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_by TEXT
+);
+
 CREATE TABLE IF NOT EXISTS services (
   id          TEXT PRIMARY KEY,
   definition  JSONB NOT NULL,

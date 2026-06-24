@@ -46,6 +46,14 @@
   .iconbtn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;transition:color .15s,box-shadow .15s}
   .iconbtn:hover{color:var(--ink);box-shadow:var(--shadow)}
   .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .menu{position:absolute;right:0;top:42px;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none;z-index:30}
+  .menu.open{display:block}
+  .menu-sec{padding:6px 0;border-bottom:1px solid var(--line)} .menu-sec:last-child{border-bottom:none}
+  .menu-h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:4px 12px}
+  .menu-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 12px;font-size:14px}
+  .menu-row select{width:auto;padding:5px 8px}
+  .menu-item{display:flex;align-items:center;gap:9px;width:100%;border:none;background:none;padding:8px 12px;border-radius:8px;color:var(--ink);font-size:14px;cursor:pointer;text-align:left}
+  .menu-item:hover{background:var(--chip)} .menu-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .pwwrap{position:relative} .pwwrap input{padding-right:38px}
   .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:grid;place-items:center;color:var(--muted);cursor:pointer;background:none;border:none}
   .eye:hover{color:var(--ink)} .eye svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -107,9 +115,10 @@
 <header><div class="wrap bar">
   <div class="logo"><svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d="M12 54 L12 24 A20 20 0 0 1 52 24 L52 54 L43 54 L43 24 A11 11 0 0 0 21 24 L21 54 Z"/><rect x="21" y="39" width="22" height="6" rx="1" fill="#fff"/></svg></div><h1>Arcanum</h1>
   <nav id="nav"></nav>
-  <div class="right"><span class="env" id="env">—</span><span id="who"></span>
-    <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" aria-label="Cambiar tema"></button>
-    <button class="ghost" onclick="logout()" aria-label="Salir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Salir</button></div>
+  <div class="right" style="position:relative"><span id="who"></span>
+    <button class="iconbtn" id="menuBtn" onclick="toggleMenu()" aria-label="Menú"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <div class="menu" id="appmenu"></div>
+  </div>
 </div></header>
 <main class="wrap"><div id="view"></div></main>
 </div>
@@ -152,7 +161,7 @@ function go(v){renderNav(v);location.hash=v;({panel:vPanel,clientes:vClientes,se
 
 async function boot(){
   try{ const me=await api('/api/auth/me'); ME=me.usuario; }catch(e){ showLogin(); return; }
-  try{ const h=await fetch('/api/health').then(r=>r.json()); ENV=h.env; $('#env').textContent=ENV.toUpperCase()+' · v'+h.version; }catch{}
+  try{ const h=await fetch('/api/health').then(r=>r.json()); ENV=h.env; }catch{}
   $('#who').textContent=ME.username+' ('+ME.role+')';
   $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');
   go((location.hash||'#panel').slice(1));
@@ -188,7 +197,9 @@ async function vClientes(){
        ${t.tieneClave?`<button class="ghost" onclick="verCsr('${t.cuit}')">CSR</button>`:''}
        <button class="ghost" onclick="pegarCert('${t.cuit}')">Pegar .crt</button>
       </td></tr>`;}).join('')||'<tr><td colspan="4" class="hint">No hay clientes. Creá el primero.</td></tr>';
-  v.innerHTML=`<div class="row"><h2 style="margin:0">Clientes (${ENV})</h2><button class="primary" style="margin-left:auto" onclick="nuevoCliente()">Nuevo cliente</button></div>
+  v.innerHTML=`<div class="row"><h2 style="margin:0">Clientes (${ENV})</h2>
+    <button style="margin-left:auto" onclick="importarCert()">Importar certificado</button>
+    <button class="primary" onclick="nuevoCliente()">Nuevo cliente</button></div>
     <div class="card" style="margin-top:12px"><table><thead><tr><th>CUIT</th><th>Nombre</th><th>Certificado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="hint" style="margin-top:10px">Flujo: <strong>Nuevo cliente</strong> genera el CSR → lo subís a ARCA → descargás el .crt → <strong>Pegar .crt</strong>.</p>`;
 }
@@ -211,6 +222,15 @@ function pegarCert(cuit){modal(`<h3>Pegar certificado de ${cuit}</h3><p class="h
   <div class="row" style="margin-top:14px"><button class="primary" onclick="guardarCert('${cuit}')">Guardar</button><button onclick="closeModal()">Cancelar</button></div>`);}
 async function guardarCert(cuit){ try{ await api('/api/tenants/'+cuit+'/certificate',{method:'POST',body:JSON.stringify({certPem:$('#certpem').value})});
   toast('Certificado cargado');closeModal();vClientes();}catch(e){toast(e.message,true);} }
+function importarCert(){modal(`<h3>Importar certificado ya validado</h3><p class="hint">Para un par clave + certificado que ya tenés (ej. el que usás en n8n). Arcanum valida que coincidan.</p>
+  <div class="f2"><div><label>CUIT</label><input id="imp_cuit" class="mono" placeholder="20111111112"></div>
+  <div><label>Nombre / Razón social</label><input id="imp_nombre"></div></div>
+  <label>Clave privada (PEM)</label><textarea id="imp_key" placeholder="-----BEGIN PRIVATE KEY-----"></textarea>
+  <label>Certificado (PEM)</label><textarea id="imp_cert" placeholder="-----BEGIN CERTIFICATE-----"></textarea>
+  <div class="row" style="margin-top:14px"><button class="primary" onclick="guardarImport()">Importar</button><button onclick="closeModal()">Cancelar</button></div>`);}
+async function guardarImport(){const cuit=($('#imp_cuit').value||'').replace(/[^0-9]/g,'');
+  try{ await api('/api/tenants/'+cuit+'/importar',{method:'POST',body:JSON.stringify({nombre:$('#imp_nombre').value,keyPem:$('#imp_key').value,certPem:$('#imp_cert').value})});
+    toast('Certificado importado');closeModal();vClientes();}catch(e){toast(e.message,true);} }
 
 /* ---------- SERVICIOS ---------- */
 async function vServicios(){
@@ -435,6 +455,39 @@ const I_EYE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10
 const I_EYEOFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.9 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3 3.9M6.3 6.3A18 18 0 0 0 2 12s3.5 7 10 7a10 10 0 0 0 4-.8"/><path d="M3 3l18 18"/></svg>';
 function pwField(id,ph,extra){return `<div class="pwwrap"><input id="${id}" type="password" ${extra||''} ${ph?'placeholder="'+ph+'"':''}><button class="eye" type="button" tabindex="-1" aria-label="Mostrar u ocultar" onclick="togglePw('${id}',this)">${I_EYE}</button></div>`;}
 function togglePw(id,btn){const el=$('#'+id);const show=el.type==='password';el.type=show?'text':'password';btn.innerHTML=show?I_EYEOFF:I_EYE;}
+
+/* ---------- MENÚ (rayitas): Acerca de + tema + entorno + salir ---------- */
+const I_LOGOUT='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>';
+function toggleMenu(){const m=$('#appmenu');const open=m.classList.toggle('open');if(open)renderMenu();}
+async function renderMenu(){
+  let cfg={entorno:ENV||'?',version:'?'};
+  try{ cfg=await api('/api/config'); }catch{}
+  const admin=['superadmin','admin'].includes(ME.role);
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  $('#appmenu').innerHTML=`
+   <div class="menu-sec"><div class="menu-h">Acerca de</div>
+     <div class="menu-row"><span>Arcanum</span><span class="mono">v${cfg.version}</span></div>
+     <div class="menu-row"><span>Usuario</span><span class="mono">${ME.username}</span></div>
+     <div class="menu-row"><span>Entorno</span><span class="tag ${cfg.entorno==='prod'?'warn':''}">${String(cfg.entorno).toUpperCase()}</span></div>
+   </div>
+   <div class="menu-sec"><div class="menu-h">Tema</div>
+     <button class="menu-item" onclick="toggleTheme();renderMenu()">${dark?I_SUN:I_MOON}<span>${dark?'Tema claro':'Tema oscuro'}</span></button>
+   </div>
+   ${admin?`<div class="menu-sec"><div class="menu-h">Entorno ARCA</div>
+     <div class="menu-row"><span>Operar contra</span>
+       <select id="m_env" onchange="cambiarEntorno(this.value)">
+         <option value="homo"${cfg.entorno==='homo'?' selected':''}>Homologación</option>
+         <option value="prod"${cfg.entorno==='prod'?' selected':''}>Producción</option>
+       </select></div>
+     <div class="hint" style="padding:2px 12px 6px">Cambia los endpoints de ARCA para toda la instancia.</div></div>`:''}
+   <div class="menu-sec"><button class="menu-item" onclick="logout()">${I_LOGOUT}<span>Salir</span></button></div>`;
+}
+async function cambiarEntorno(v){
+  if(!confirm('¿Cambiar el entorno de ARCA a '+v.toUpperCase()+'? Afecta a toda la instancia.')){renderMenu();return;}
+  try{ await api('/api/config/entorno',{method:'POST',body:JSON.stringify({entorno:v})}); toast('Entorno: '+v.toUpperCase()); location.reload(); }
+  catch(e){ toast(e.message,true); renderMenu(); }
+}
+document.addEventListener('click',e=>{const m=$('#appmenu'),b=$('#menuBtn');if(m&&m.classList.contains('open')&&!m.contains(e.target)&&b&&!b.contains(e.target))m.classList.remove('open');});
 
 setThemeIcon();
 boot();

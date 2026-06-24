@@ -184,6 +184,23 @@ async function route(req, res, url) {
     return sendJson(res, 200, { ok: true, usuario: principal });
   }
 
+  // --- Config del sistema ---
+  // GET /api/config  -> entorno activo + version (para el "Acerca de")
+  if (req.method === 'GET' && url.pathname === '/api/config') {
+    return sendJson(res, 200, { ok: true, entorno: config.env, version: config.version, entornos: ['homo', 'prod'] });
+  }
+  // POST /api/config/entorno  { entorno }  -> cambia homo/prod (admin+), persistido
+  if (req.method === 'POST' && url.pathname === '/api/config/entorno') {
+    requireRole(principal, 'superadmin', 'admin');
+    const { entorno } = await readJsonBody(req);
+    const v = config.setEnv(entorno);
+    await db.query(
+      "INSERT INTO settings (key, value, updated_by, updated_at) VALUES ('entorno',$1,$2,now()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_by=$2, updated_at=now()",
+      [v, principal.username],
+    );
+    return sendJson(res, 200, { ok: true, entorno: v });
+  }
+
   // GET /api/tenants  -> CUITs con certificado cargado
   if (req.method === 'GET' && url.pathname === '/api/tenants') {
     let lista = await tenants.list(config.env);
@@ -468,6 +485,11 @@ async function start() {
   await db.migrate();
   await catalog.init();
   console.log(`[arcanum] catalogo: ${catalog.list().length} servicios cargados`);
+  // Entorno persistido (si el admin lo cambio desde la UI) pisa al del env var.
+  try {
+    const { rows } = await db.query("SELECT value FROM settings WHERE key = 'entorno'");
+    if (rows[0] && rows[0].value) config.setEnv(rows[0].value);
+  } catch { /* primera vez: aun no existe */ }
   const seeded = await users.seedAdmin();
   if (seeded && seeded.generated) {
     console.log(`\n[arcanum] Usuario superadmin creado: ${seeded.username}`);

@@ -29,9 +29,21 @@ const ENDPOINTS = {
 
 const DATA_DIR = process.env.ARCANUM_DATA_DIR || path.join(process.cwd(), 'data');
 
+// Entorno activo: arranca del env var pero es cambiable en caliente (y se
+// persiste en DB). Como env/isProd/endpoints son getters, todo el codigo que
+// lee config.env ve el valor vigente sin cambios.
+let activeEnv = IS_PROD ? 'prod' : 'homo';
+
 const config = {
-  env: IS_PROD ? 'prod' : 'homo',
-  isProd: IS_PROD,
+  get env() { return activeEnv; },
+  get isProd() { return activeEnv === 'prod'; },
+  get endpoints() { return ENDPOINTS[activeEnv]; },
+  setEnv(e) {
+    const v = String(e).toLowerCase();
+    if (v !== 'homo' && v !== 'prod') throw Object.assign(new Error('Entorno invalido (homo|prod)'), { httpStatus: 400 });
+    activeEnv = v;
+    return activeEnv;
+  },
   port: parseInt(process.env.PORT || '8094', 10),
   // Clave de API para proteger el gateway. Si esta vacia se genera una al
   // arrancar y se imprime UNA vez en el log (patron de la suite).
@@ -49,7 +61,6 @@ const config = {
   dataDir: DATA_DIR,
   certsDir: path.join(DATA_DIR, 'certs'),
   cacheDir: path.join(DATA_DIR, 'cache'),
-  endpoints: IS_PROD ? ENDPOINTS.prod : ENDPOINTS.homo,
   // El Ticket de Acceso (TA) dura 12hs. Renovamos con margen de seguridad.
   tokenRenewMarginMs: 10 * 60 * 1000, // 10 minutos antes del vencimiento
   // Timeout de las llamadas SOAP a ARCA.
