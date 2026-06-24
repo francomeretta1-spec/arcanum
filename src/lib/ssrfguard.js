@@ -8,11 +8,6 @@ function err(message) {
   return Object.assign(new Error(message), { httpStatus: 400 });
 }
 
-// Rangos IPv4 privados/reservados (CIDR -> [base, bits]).
-const BLOCKED_V4 = [
-  [0, 8], [10, 8], [127, 8], [169254 << 0, 16], // 169.254/16 se chequea aparte
-];
-
 function ipv4ToInt(ip) {
   const p = ip.split('.').map(Number);
   if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;

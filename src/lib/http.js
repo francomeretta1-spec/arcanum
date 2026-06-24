@@ -53,4 +53,22 @@ function readJsonBody(req) {
   });
 }
 
-module.exports = { sendJson, sendError, readJsonBody };
+function readTextBody(req) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > MAX_BODY) {
+        reject(Object.assign(new Error('Body demasiado grande'), { httpStatus: 413 }));
+        req.destroy();
+        return;
+      }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+module.exports = { sendJson, sendError, readJsonBody, readTextBody };

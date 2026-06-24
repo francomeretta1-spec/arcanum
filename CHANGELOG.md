@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 Versionado semantico.
 
+## [0.2.0] - 2026-06-24
+
+### Agregado
+- **e-Ventanilla** (modulo rico SOAP 1.2 + MTOM): listar/leer comunicaciones y descargar PDF adjuntos.
+- **Switch de entorno homo/prod desde la UI** (admin), en caliente y persistido.
+- **Importar par clave+certificado** existente desde la UI/API.
+- **Verificar asociacion** del certificado por servicio (boton en la UI + `/api/services/:id/verificar`).
+- **Emision por lote** (JSON o CSV): `POST /api/wsfev1/lote`.
+- **Notificaciones por email** (SMTP) ademas de webhooks.
+- **OIDC**: verificacion de la firma del id_token contra el JWKS.
+- Menu hamburguesa (Acerca de + tema + entorno), ojitos en contrasenas, generador con presets de e-Ventanilla/padron A5.
+- OpenAPI completo, ESLint, SECURITY.md, CONTRIBUTING.md, imagen base pinneada por digest, mas tests.
+
+### Cambiado
+- Token WSAA: sin renovacion proactiva (evita el rechazo "ya posee un TA valido" y el baneo); renovacion lazy + fallback al TA cacheado.
+- Quitados padron A4/A10 (endpoints no verificados) con poda automatica.
+- Timeout SOAP a 15s para errores rapidos.
+
 ## [0.1.0] - 2026-06-24
 
 ### Agregado

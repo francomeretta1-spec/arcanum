@@ -12,7 +12,6 @@
 const forge = require('node-forge');
 const db = require('./../db');
 const { config } = require('../config');
-const { encrypt } = require('../crypto/vault');
 const tenants = require('../auth/tenants');
 
 /**

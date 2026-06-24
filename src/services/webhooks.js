@@ -6,6 +6,7 @@
 
 const crypto = require('crypto');
 const db = require('../db');
+const mailer = require('./mailer');
 const { assertSafeUrl } = require('../lib/ssrfguard');
 
 const EVENTOS = ['comprobante_emitido', 'comprobante_rechazado', 'cert_por_vencer', 'arca_caido', 'arca_restablecido'];
@@ -33,6 +34,7 @@ async function eliminar(id) {
 
 /** Dispara un evento a todos los webhooks suscriptos (best-effort, no bloquea). */
 async function emitir(evento, payload) {
+  mailer.notify(evento, payload).catch(() => {}); // email opcional, en paralelo
   let rows = [];
   try {
     ({ rows } = await db.query('SELECT url, secret FROM webhooks WHERE activo = true AND $1 = ANY(eventos)', [evento]));

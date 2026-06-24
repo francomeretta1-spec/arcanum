@@ -235,9 +235,12 @@ async function guardarImport(){const cuit=($('#imp_cuit').value||'').replace(/[^
 /* ---------- SERVICIOS ---------- */
 async function vServicios(){
   const v=$('#view');const {servicios,categorias}=await api('/api/services');
+  let tenants=[];try{tenants=(await api('/api/tenants')).tenants;}catch{}
   const admin=['superadmin','admin'].includes(ME.role);
+  const cuitOpts=tenants.map(t=>`<option value="${t.cuit}">${t.cuit}${t.nombre?' — '+t.nombre:''}</option>`).join('');
   let html=`<div class="row"><h2 style="margin:0">Servicios de ARCA (${servicios.length})</h2>${admin?'<button class="primary" style="margin-left:auto" onclick="editarServicio()">Agregar servicio</button>':''}</div>
-    <p class="hint">El catálogo se guarda en la base y ${admin?'lo podés editar acá':'lo edita un superadmin'}. Tocá "Cómo activar" para la guía.</p>`;
+    <p class="hint">El catálogo se guarda en la base y ${admin?'lo podés editar acá':'lo edita un superadmin'}. Tocá "Cómo activar" para la guía, o "Verificar" para chequear si tu certificado quedó asociado.</p>
+    ${cuitOpts?`<div class="row" style="margin:6px 0 4px"><span class="hint">Verificar con el CUIT:</span><select id="verif_cuit" style="max-width:280px">${cuitOpts}</select></div>`:'<p class="hint">Cargá un cliente para poder verificar la asociación.</p>'}`;
   const orden=['facturacion','consultas','agro','otros'];
   for(const cat of Object.keys(categorias).sort((a,b)=>orden.indexOf(a)-orden.indexOf(b))){
     html+=`<h3>${cat}</h3>`;
@@ -249,14 +252,26 @@ async function vServicios(){
       html+=`<div class="svc"><div class="top">
         <div><div><strong>${s.nombre}</strong> ${tag} ${off}</div><div class="hint">${s.descripcion||''}</div></div>
         <div class="row" style="margin-left:auto">
+          <button class="ghost" onclick="verificarServicio('${s.id}',this)">Verificar</button>
           <button class="ghost" onclick="this.closest('.svc').querySelector('.pasos').classList.toggle('open')">Cómo activar</button>
           ${admin?`<button class="ghost" onclick='editarServicio(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Editar</button>`:''}
         </div></div>
+        <div class="verif" style="font-size:13px;margin-top:6px"></div>
         <div class="pasos">${rel}<ol>${pasos}</ol>
           <p class="hint"><a target="_blank" href="https://serviciosweb.afip.gob.ar/clavefiscal/adminrel/main.aspx">Abrir Administrador de Relaciones</a>
           ${s.activacion&&s.activacion.docs?` · <a target="_blank" href="${s.activacion.docs}">documentación</a>`:''}</p></div></div>`;}
   }
   v.innerHTML=html;
+}
+async function verificarServicio(id,btn){
+  const sel=$('#verif_cuit');const cuit=sel&&sel.value;
+  if(!cuit){toast('Cargá un cliente primero',true);return;}
+  const box=btn.closest('.svc').querySelector('.verif');
+  box.innerHTML='<span class="hint">Verificando contra ARCA…</span>';
+  try{ const r=await api('/api/services/'+id+'/verificar?cuit='+cuit);
+    if(r.asociado) box.innerHTML=`<span class="tag ok">asociado</span> <span class="hint">CUIT ${cuit} · token vence ${(r.expira||'').slice(0,10)}</span>`;
+    else box.innerHTML=`<span class="tag no">no asociado</span> <span class="hint">${(r.motivo||'').slice(0,180)}</span>`;
+  }catch(e){box.innerHTML=`<span class="tag no">error</span> <span class="hint">${e.message}</span>`;}
 }
 function editarServicio(s){
   s=s||{endpoints:{}};const e=s.endpoints||{};

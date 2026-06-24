@@ -9,7 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { config } = require('./config');
-const { sendJson, sendError, readJsonBody } = require('./lib/http');
+const { sendJson, sendError, readJsonBody, readTextBody } = require('./lib/http');
 const db = require('./db');
 const catalog = require('./catalog');
 const engine = require('./soap/engine');
@@ -223,6 +223,19 @@ async function route(req, res, url) {
   if (req.method === 'GET' && seg[0] === 'api' && seg[1] === 'services' && seg[2] && seg[3] === 'operaciones') {
     return sendJson(res, 200, { ok: true, servicio: seg[2], operaciones: await introspect.operaciones(seg[2]) });
   }
+  // GET /api/services/:id/verificar?cuit=  -> ¿el cert esta asociado a este WS?
+  if (req.method === 'GET' && seg[0] === 'api' && seg[1] === 'services' && seg[2] && seg[3] === 'verificar') {
+    const cuit = requireQ(q, 'cuit');
+    assertCuitAllowed(principal, cuit);
+    const svc = catalog.get(seg[2]);
+    if (!svc) throw notFound();
+    try {
+      const ta = await wsaa.getAccessTicket(cuit, svc.wsaaService, config.env);
+      return sendJson(res, 200, { ok: true, asociado: true, servicio: seg[2], wsaaService: svc.wsaaService, expira: ta.expirationTime });
+    } catch (e) {
+      return sendJson(res, 200, { ok: true, asociado: false, servicio: seg[2], wsaaService: svc.wsaaService, motivo: e.message });
+    }
+  }
   // Admin de catalogo (superadmin): crear/editar/borrar/restaurar
   if (seg[0] === 'api' && seg[1] === 'services' && req.method !== 'GET') {
     requireRole(principal, 'superadmin', 'admin');
@@ -290,6 +303,21 @@ async function route(req, res, url) {
       const cuit = requireQ(q, 'cuit');
       const r = await wsfev1.consultar(cuit, requireQ(q, 'puntoVenta'), requireQ(q, 'tipoComprobante'), requireQ(q, 'numero'));
       return sendJson(res, 200, { ok: true, comprobante: r });
+    }
+    // POST /api/wsfev1/lote   (JSON {comprobantes:[...]} o CSV)  -> emision por lote
+    if (req.method === 'POST' && seg[2] === 'lote') {
+      requireRole(principal, 'superadmin', 'admin', 'operador');
+      const ctype = req.headers['content-type'] || '';
+      let invoices;
+      if (ctype.includes('csv') || ctype.includes('text/plain')) {
+        invoices = wsfev1.parseLoteCsv(await readTextBody(req));
+      } else {
+        const b = await readJsonBody(req);
+        invoices = Array.isArray(b) ? b : b.comprobantes || [];
+      }
+      if (!invoices.length) throw badRequest('El lote no tiene comprobantes');
+      for (const inv of invoices) if (inv.cuit) assertCuitAllowed(principal, inv.cuit);
+      return sendJson(res, 200, { ok: true, ...(await wsfev1.authorizeBatch(invoices)) });
     }
     // POST /api/wsfev1/comprobantes   { cuit, ...comprobante }
     if (req.method === 'POST' && seg[2] === 'comprobantes') {

@@ -6,7 +6,6 @@
 // codigo contra el token endpoint (confidential client con secret).
 
 const crypto = require('crypto');
-const { config } = require('../config');
 
 const CFG = {
   issuer: process.env.ARCANUM_OIDC_ISSUER || '',
@@ -82,7 +81,7 @@ async function exchangeCode(code, verifier, redirectUri) {
   });
   if (!res.ok) throw new Error('OIDC: fallo el intercambio de codigo');
   const tok = await res.json();
-  const claims = decodeJwtPayload(tok.id_token) || {};
+  const claims = await verifyIdToken(tok.id_token);
   const role = mapRole(claims[CFG.roleClaim]);
   const username = claims.preferred_username || claims.email || claims.sub || 'oidc-user';
   return { username, role, federated: true };
@@ -96,13 +95,41 @@ function mapRole(claim) {
   return CFG.defaultRole;
 }
 
-function decodeJwtPayload(jwt) {
-  try {
-    const part = String(jwt).split('.')[1];
-    return JSON.parse(Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
-  } catch {
-    return null;
-  }
+function b64url(s) {
+  return Buffer.from(String(s).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+}
+
+let jwksCache = null;
+async function jwks() {
+  if (jwksCache) return jwksCache;
+  const d = await discover();
+  if (!d.jwks_uri) throw new Error('OIDC: el issuer no expone jwks_uri');
+  const res = await fetchTimeout(d.jwks_uri);
+  jwksCache = (await res.json()).keys || [];
+  return jwksCache;
+}
+
+/** Verifica firma RS256 del id_token contra el JWKS + claims (iss/aud/exp). */
+async function verifyIdToken(idToken) {
+  const parts = String(idToken).split('.');
+  if (parts.length !== 3) throw new Error('OIDC: id_token malformado');
+  const [h, p, sig] = parts;
+  const header = JSON.parse(b64url(h).toString('utf8'));
+  if (header.alg !== 'RS256') throw new Error('OIDC: alg no soportado (' + header.alg + ')');
+  const keys = await jwks();
+  const jwk = keys.find((k) => k.kid === header.kid) || keys.find((k) => k.kty === 'RSA');
+  if (!jwk) throw new Error('OIDC: no se encontro la clave en el JWKS');
+  const pub = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  const ok = crypto.verify('sha256', Buffer.from(h + '.' + p), pub, b64url(sig));
+  if (!ok) throw new Error('OIDC: firma del id_token invalida');
+  const claims = JSON.parse(b64url(p).toString('utf8'));
+  const d = await discover();
+  const iss = CFG.issuer.replace(/\/$/, '');
+  if (claims.iss !== d.issuer && claims.iss !== iss) throw new Error('OIDC: iss invalido');
+  const aud = claims.aud;
+  if (aud !== CFG.clientId && !(Array.isArray(aud) && aud.includes(CFG.clientId))) throw new Error('OIDC: aud invalido');
+  if (claims.exp && Date.now() / 1000 > claims.exp) throw new Error('OIDC: id_token expirado');
+  return claims;
 }
 
 module.exports = { enabled, buildAuthUrl, exchangeCode, CFG };

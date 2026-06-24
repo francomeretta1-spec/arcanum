@@ -353,10 +353,58 @@ async function getParams(cuit, name) {
   return getParam(cuit, p.method, p.item);
 }
 
+/** Emite un lote de comprobantes; nunca corta el lote ante un rechazo. */
+async function authorizeBatch(invoices) {
+  const resultados = [];
+  for (const inv of invoices) {
+    try {
+      if (!inv || !inv.cuit) throw new SoapError('Falta "cuit" en una fila del lote', 400);
+      resultados.push(await authorizeInvoice(inv.cuit, inv));
+    } catch (e) {
+      resultados.push({ aprobado: false, cuit: inv && inv.cuit, error: e.message });
+    }
+  }
+  const aprobados = resultados.filter((r) => r.aprobado).length;
+  return { total: resultados.length, aprobados, rechazados: resultados.length - aprobados, resultados };
+}
+
+/** Parsea un CSV (header + filas) a un arreglo de comprobantes. */
+function parseLoteCsv(text) {
+  const lines = String(text).split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length) return [];
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(delim).map((h) => h.trim());
+  const n = (x) => (x === '' || x === undefined ? undefined : Number(x));
+  return lines.slice(1).map((line) => {
+    const cols = line.split(delim);
+    const o = {};
+    headers.forEach((h, i) => (o[h] = (cols[i] || '').trim()));
+    const inv = {
+      cuit: o.cuit,
+      puntoVenta: n(o.puntoVenta),
+      tipoComprobante: n(o.tipoComprobante),
+      concepto: n(o.concepto) || 1,
+      tipoDocReceptor: n(o.tipoDocReceptor) || 99,
+      nroDocReceptor: o.nroDocReceptor || '0',
+      importeNeto: n(o.importeNeto) || 0,
+      importeIva: n(o.importeIva) || 0,
+      importeTotal: n(o.importeTotal) || 0,
+      idempotencyKey: o.idempotencyKey || undefined,
+      fecha: o.fecha || undefined,
+    };
+    if (o.alicuotaId && inv.importeIva) {
+      inv.alicuotasIva = [{ id: n(o.alicuotaId), baseImponible: inv.importeNeto, importe: inv.importeIva }];
+    }
+    return inv;
+  });
+}
+
 module.exports = {
   dummy,
   lastAuthorized,
   authorizeInvoice,
+  authorizeBatch,
+  parseLoteCsv,
   consultar,
   getParams,
   PARAMS,
