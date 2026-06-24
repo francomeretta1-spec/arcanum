@@ -97,6 +97,13 @@ async function call(serviceId, operation, params = {}, opts = {}) {
         `<authRequest><token>${ta.token}</token><sign>${ta.sign}</sign><cuitRepresentada>${cuit}</cuitRepresentada></authRequest>` +
         toXml(params) +
         `</ser:${operation}>`;
+    } else if (style === 'apoc') {
+      // Estilo WSAPOC (.NET tempuri): credencial envuelta + CUITDelegado.
+      inner =
+        `<ws:${operation} xmlns:ws="${ns}">` +
+        `<credencial><Token>${ta.token}</Token><Sign>${ta.sign}</Sign><CUITDelegado>${cuit}</CUITDelegado></credencial>` +
+        toXml(params) +
+        `</ws:${operation}>`;
     } else {
       // Estilo body-auth (FEV1 y familia): <Auth><Token><Sign><Cuit> + params.
       inner =

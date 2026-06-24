@@ -198,6 +198,25 @@ const SERVICES = [
     activacion: { relacionNombre: 'wscdc', pasos: pasosActivacion('wscdc') },
   },
   {
+    id: 'wsapoc',
+    nombre: 'Base de Apocrifos (WSAPOC)',
+    descripcion: 'Consulta si un CUIT figura en la base de facturas/contribuyentes apocrifos de ARCA.',
+    categoria: 'consultas',
+    wsaaService: 'wsapoc',
+    soapNamespace: 'http://tempuri.org/',
+    authStyle: 'apoc',
+    soapActionTemplate: 'http://tempuri.org/{op}',
+    endpoints: {
+      homo: 'https://eapoc-ws-qaext.afip.gob.ar/service.asmx',
+      prod: 'https://eapoc-ws.afip.gob.ar/service.asmx',
+    },
+    rich: true,
+    activacion: {
+      relacionNombre: 'wsapoc (Consulta de Apocrifos)',
+      pasos: pasosActivacion('wsapoc'),
+    },
+  },
+  {
     id: 'eventanilla',
     nombre: 'e-Ventanilla (Comunicaciones)',
     descripcion: 'Lista, lee y descarga las comunicaciones (y sus PDF) de la Ventanilla Electronica.',

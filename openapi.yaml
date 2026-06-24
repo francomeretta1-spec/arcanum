@@ -241,6 +241,15 @@ paths:
         - { name: cuit, in: query, required: true, schema: { type: string, description: CUIT representante (cert cargado) } }
       responses: { '200': { description: datos del contribuyente } }
 
+  /api/apoc/{cuit}:
+    get:
+      tags: [Padron]
+      summary: Consulta base de apocrifos (WSAPOC) — ¿el CUIT figura como apocrifo?
+      parameters:
+        - { name: cuit, in: path, required: true, schema: { type: string, description: CUIT a consultar } }
+        - { name: cuit, in: query, required: true, schema: { type: string, description: CUIT representante (cert cargado) } }
+      responses: { '200': { description: "{ esApocrifo, codigo, descripcion, fechaCondicion, fechaPublicacion }" } }
+
   /api/eventanilla/status:
     get: { tags: [e-Ventanilla], summary: Estado (dummy), responses: { '200': { description: ok } } }
   /api/eventanilla/comunicaciones:

@@ -23,6 +23,7 @@ const wsaa = require('./auth/wsaa');
 const tokenStore = require('./auth/tokenStore');
 const wsfev1 = require('./services/wsfev1');
 const padron = require('./services/padron');
+const apoc = require('./services/apoc');
 const eventanilla = require('./services/eventanilla');
 const onboarding = require('./services/onboarding');
 const comprobantes = require('./services/comprobantes');
@@ -465,6 +466,14 @@ async function route(req, res, url) {
     const cuitRepre = requireQ(q, 'cuit');
     const datos = await padron.consultarPersona(seg[2], cuitRepre, seg[3]);
     return sendJson(res, 200, { ok: true, alcance: seg[2], cuit: seg[3], datos });
+  }
+
+  // --- WSAPOC (base de apocrifos) ---
+  // GET /api/apoc/:cuitConsulta?cuit=   (cuit = representada / titular del certificado)
+  if (req.method === 'GET' && seg[0] === 'api' && seg[1] === 'apoc' && seg[2]) {
+    const cuitRepre = requireQ(q, 'cuit');
+    const datos = await apoc.consultar(cuitRepre, seg[2]);
+    return sendJson(res, 200, { ok: true, ...datos });
   }
 
   throw notFound();
