@@ -100,11 +100,13 @@ function start() {
     return;
   }
   // Primer monitoreo a los 5s del arranque, luego cada 5 min.
+  // NO renovamos tokens proactivamente: ARCA rechaza pedir un TA nuevo mientras
+  // el anterior siga vigente. El token se renueva solo, on-demand, recien cuando
+  // vencio (asi hay un unico login cada ~12h por servicio).
   setTimeout(() => monitor().catch(() => {}), 5000);
   every(5 * 60 * 1000, monitor);
-  every(10 * 60 * 1000, renovarTokens);
   every(12 * 60 * 60 * 1000, avisarVencimientos);
-  console.log('[arcanum] daemons activos (monitor 5m, renovacion 10m, vencimientos 12h)');
+  console.log('[arcanum] daemons activos (monitor 5m, vencimientos 12h)');
 }
 
 function stop() {

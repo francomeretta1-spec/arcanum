@@ -63,7 +63,20 @@ async function getAccessTicket(cuit, service, entorno = config.env) {
     const cms = signTRA(tra, certPem, keyPem);
     const envelope = buildLoginEnvelope(cms);
 
-    const body = await post(config.endpoints.wsaa, '', envelope);
+    let body;
+    try {
+      body = await post(config.endpoints.wsaa, '', envelope);
+    } catch (e) {
+      // ARCA rechaza pedir un TA nuevo si el anterior sigue vigente
+      // ("El CEE ya posee un TA valido..."). Si todavia tenemos uno sin vencer
+      // cacheado, lo reusamos en vez de fallar (evita el baneo por re-login).
+      const blob = (e.message || '') + JSON.stringify(e.extra || {});
+      if (/ya posee un ta|ta v[aá]lido|v[aá]lido para el acceso|ya posee/i.test(blob)) {
+        const cached = await tokenStore.readRaw(c, service, entorno);
+        if (cached) return cached;
+      }
+      throw e;
+    }
     const ret = body?.loginCmsResponse?.loginCmsReturn;
     if (!ret) {
       throw new SoapError('WSAA no devolvio loginCmsReturn', 502, { body });

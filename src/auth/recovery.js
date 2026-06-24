@@ -8,7 +8,9 @@
 const tokenStore = require('./tokenStore');
 
 // Patrones de error de token de ARCA (WSAA y servicios de negocio).
-const TOKEN_ERR = /token.*(venc|expir|inv[aá]lid|invalid|caduc)|validaciondetoken|cms\.(bad|expired)|el token no es v[aá]lido|wsaa|xml\.generationtime/i;
+// Especifico de "token vencido/invalido" — NO matchea errores generales de WSAA
+// (eso causaria re-logins innecesarios y riesgo de baneo).
+const TOKEN_ERR = /token.{0,20}(venc|expir|inv[aá]lid|invalid|caduc)|el token no es v[aá]lido|validaciondetoken|cms\.(bad|expired)|the token has expired/i;
 
 function looksLikeTokenError(e) {
   const msg = (e && e.message) || '';

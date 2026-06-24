@@ -34,6 +34,19 @@ async function read(cuit, service, entorno, client = db) {
   return null;
 }
 
+// Devuelve el TA cacheado mientras NO este vencido (ignora el margen de
+// renovacion). Se usa como fallback cuando ARCA rechaza un re-login temprano.
+async function readRaw(cuit, service, entorno) {
+  const { rows } = await db.query(
+    'SELECT token, sign, generation_time, expiration_time FROM access_tickets WHERE cuit = $1 AND service = $2 AND entorno = $3',
+    [cuit, service, entorno],
+  );
+  if (!rows.length) return null;
+  const ta = rows[0];
+  if (new Date(ta.expiration_time).getTime() <= Date.now()) return null;
+  return { token: ta.token, sign: ta.sign, generationTime: ta.generation_time, expirationTime: ta.expiration_time, service, cuit };
+}
+
 async function write(cuit, service, entorno, ta, client = db) {
   await client.query(
     `INSERT INTO access_tickets (cuit, service, entorno, token, sign, generation_time, expiration_time, updated_at)
@@ -66,4 +79,4 @@ async function invalidate(cuit, service, entorno) {
   await db.query('DELETE FROM access_tickets WHERE cuit = $1 AND service = $2 AND entorno = $3', [cuit, service, entorno]);
 }
 
-module.exports = { getOrCreate, invalidate, read };
+module.exports = { getOrCreate, invalidate, read, readRaw };
