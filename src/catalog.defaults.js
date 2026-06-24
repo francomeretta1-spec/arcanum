@@ -127,20 +127,6 @@ const SERVICES = [
 
   // ---------------- CONSULTAS / PADRON ----------------
   {
-    id: 'padron_a4',
-    nombre: 'Padron Alcance 4',
-    descripcion: 'Datos basicos de un contribuyente.',
-    categoria: 'consultas',
-    wsaaService: 'ws_sr_padron_a4',
-    soapNamespace: 'http://a4.soap.ws.server.puc.sr/',
-    endpoints: {
-      homo: 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA4',
-      prod: 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA4',
-    },
-    rich: false,
-    activacion: { relacionNombre: 'ws_sr_padron_a4', pasos: pasosActivacion('ws_sr_padron_a4') },
-  },
-  {
     id: 'padron_a5',
     nombre: 'Constancia de Inscripcion (A5)',
     descripcion: 'Constancia de inscripcion / datos fiscales del contribuyente.',
@@ -153,20 +139,6 @@ const SERVICES = [
     },
     rich: true,
     activacion: { relacionNombre: 'ws_sr_constancia_inscripcion', pasos: pasosActivacion('ws_sr_constancia_inscripcion') },
-  },
-  {
-    id: 'padron_a10',
-    nombre: 'Padron Alcance 10',
-    descripcion: 'Datos de relaciones del contribuyente.',
-    categoria: 'consultas',
-    wsaaService: 'ws_sr_padron_a10',
-    soapNamespace: 'http://a10.soap.ws.server.puc.sr/',
-    endpoints: {
-      homo: 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA10',
-      prod: 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA10',
-    },
-    rich: false,
-    activacion: { relacionNombre: 'ws_sr_padron_a10', pasos: pasosActivacion('ws_sr_padron_a10') },
   },
   {
     id: 'padron_a13',

@@ -28,6 +28,13 @@ async function seed() {
       [def.id, JSON.stringify(def)],
     );
   }
+  // Poda: borra builtins que ya no estan en los defaults y que el usuario no
+  // edito (ej. padron A4/A10, retirados por endpoint no verificado).
+  const ids = DEFAULTS.map((d) => d.id);
+  await db.query(
+    "DELETE FROM services WHERE origin = 'builtin' AND updated_by = 'seed' AND NOT (id = ANY($1))",
+    [ids],
+  );
 }
 
 async function reload() {
