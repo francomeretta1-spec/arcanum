@@ -383,7 +383,7 @@ async function vUsuarios(){
 async function addUser(){try{await api('/api/usuarios',{method:'POST',body:JSON.stringify({username:$('#u_user').value,password:$('#u_pass').value,role:$('#u_role').value})});toast('Usuario creado');vUsuarios();}catch(e){toast(e.message,true);}}
 
 /* ---------- GENERADOR DE CÓDIGO ---------- */
-const GEN_PRESETS={
+const RICH_PRESETS={
   'Emitir comprobante (CAE)':{m:'POST',p:'/api/wsfev1/comprobantes',b:{cuit:'20111111112',puntoVenta:1,tipoComprobante:11,concepto:1,tipoDocReceptor:99,nroDocReceptor:'0',importeNeto:100,importeIva:21,importeTotal:121,idempotencyKey:'venta-0001',alicuotasIva:[{id:5,baseImponible:100,importe:21}]}},
   'Último número autorizado':{m:'GET',p:'/api/wsfev1/ultimo-autorizado?cuit=20111111112&puntoVenta=1&tipoComprobante=11',b:null},
   'Consultar comprobante':{m:'GET',p:'/api/wsfev1/consultar?cuit=20111111112&puntoVenta=1&tipoComprobante=11&numero=1',b:null},
@@ -400,7 +400,13 @@ async function vGenerador(){
   const v=$('#view');
   let services=[];
   try{ services=(await api('/api/services')).servicios; }catch{}
-  const opts=Object.keys(GEN_PRESETS).map(k=>`<option>${k}</option>`).join('');
+  window._SVCS=services;
+  const richOpts=Object.keys(RICH_PRESETS).map(k=>`<option value="r:${k}">${k}</option>`).join('');
+  const orden=['facturacion','consultas','agro','aduana','otros'];
+  const byCat={}; services.forEach(s=>{ if(s.id==='eventanilla')return; (byCat[s.categoria||'otros']=byCat[s.categoria||'otros']||[]).push(s); });
+  let svcGroups=''; for(const cat of Object.keys(byCat).sort((a,b)=>orden.indexOf(a)-orden.indexOf(b))){
+    svcGroups+=`<optgroup label="${cat}">`+byCat[cat].map(s=>`<option value="s:${s.id}">${s.nombre}</option>`).join('')+'</optgroup>'; }
+  const opts=`<optgroup label="Comunes (con ejemplo)">${richOpts}</optgroup>${svcGroups}`;
   const svcOpts=services.map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
   v.innerHTML=`<h2>Generador de código</h2>
    <p class="hint">Elegí el endpoint, completá los datos y copiá el nodo de n8n listo para pegar, o el snippet en tu lenguaje.</p>
@@ -437,7 +443,16 @@ function usarOp(i){
   $('#g_body').value=JSON.stringify({cuit:'20111111112',params},null,2);
   genAll(); toast('Operación cargada: '+o.nombre);
 }
-function applyPreset(){const p=GEN_PRESETS[$('#g_preset').value];$('#g_method').value=p.m;$('#g_path').value=p.p;$('#g_body').value=p.b?JSON.stringify(p.b,null,2):'';genAll();}
+function applyPreset(){
+  const val=$('#g_preset').value; let p;
+  if(val.indexOf('s:')===0){
+    const id=val.slice(2); const svc=(window._SVCS||[]).find(s=>s.id===id);
+    const op=(svc&&svc.dummyOp)||'OPERACION';
+    p={m:'POST',p:'/api/ws/'+id+'/'+op,b:{cuit:'20111111112',params:{}}};
+  } else { p=RICH_PRESETS[val.indexOf('r:')===0?val.slice(2):val]; }
+  if(!p)return;
+  $('#g_method').value=p.m;$('#g_path').value=p.p;$('#g_body').value=p.b?JSON.stringify(p.b,null,2):'';genAll();
+}
 function genAll(){
   const base=$('#g_base').value.replace(/\/$/,''),key=$('#g_key').value,m=$('#g_method').value,url=base+$('#g_path').value;
   let body=null;const raw=$('#g_body').value.trim();
