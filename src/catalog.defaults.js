@@ -155,6 +155,34 @@ const SERVICES = [
     activacion: { relacionNombre: 'ws_sr_padron_a13', pasos: pasosActivacion('ws_sr_padron_a13') },
   },
   {
+    id: 'padron_a4',
+    nombre: 'Padron Alcance 4',
+    descripcion: 'Datos basicos de un contribuyente (getPersona).',
+    categoria: 'consultas',
+    wsaaService: 'ws_sr_padron_a4',
+    soapNamespace: 'http://a4.soap.ws.server.puc.sr/',
+    endpoints: {
+      homo: 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA4',
+      prod: 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA4',
+    },
+    rich: false,
+    activacion: { relacionNombre: 'ws_sr_padron_a4', pasos: pasosActivacion('ws_sr_padron_a4') },
+  },
+  {
+    id: 'padron_a10',
+    nombre: 'Padron Alcance 10',
+    descripcion: 'Datos de relaciones del contribuyente.',
+    categoria: 'consultas',
+    wsaaService: 'ws_sr_padron_a10',
+    soapNamespace: 'http://a10.soap.ws.server.puc.sr/',
+    endpoints: {
+      homo: 'https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA10',
+      prod: 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA10',
+    },
+    rich: false,
+    activacion: { relacionNombre: 'ws_sr_padron_a10', pasos: pasosActivacion('ws_sr_padron_a10') },
+  },
+  {
     id: 'wscdc',
     nombre: 'Constatacion de Comprobantes (WSCDC)',
     descripcion: 'Verifica que un CAE/comprobante emitido sea valido.',
@@ -324,6 +352,53 @@ const SERVICES = [
     },
     rich: false,
     activacion: { relacionNombre: 'wsltv', pasos: pasosActivacion('wsltv') },
+  },
+
+  // ---------------- ADUANA ----------------
+  {
+    id: 'wdigdepfiel',
+    nombre: 'Digitalizacion Depositario Fiel (wDigDepFiel)',
+    descripcion: 'Digitalizacion de documentacion del depositario fiel (aduana).',
+    categoria: 'aduana',
+    wsaaService: 'wDigDepFiel',
+    soapNamespace: 'ar.gov.afip.dia.serviciosWeb.wDigDepFiel',
+    soapActionTemplate: 'ar.gov.afip.dia.serviciosWeb.wDigDepFiel/{op}',
+    endpoints: {
+      homo: 'https://testdia.afip.gov.ar/Dia/Ws/wDigDepFiel/wDigDepFiel.asmx',
+      prod: 'https://servicios3.arca.gob.ar/Dia/Ws/wDigDepFiel/wDigDepFiel.asmx',
+    },
+    rich: false,
+    activacion: { relacionNombre: 'wDigDepFiel', pasos: pasosActivacion('wDigDepFiel') },
+  },
+  {
+    id: 'wgesinv',
+    nombre: 'Aprobar/Denegar Despachos INV (WGESINV)',
+    descripcion: 'Aprobacion/denegacion de despachos de la industria vitivinicola (INV).',
+    categoria: 'aduana',
+    wsaaService: 'wgesinv',
+    soapNamespace: 'ar.gov.afip.dia.serviciosweb.WGesINV',
+    soapActionTemplate: 'ar.gov.afip.dia.serviciosweb.WGesINV/{op}',
+    endpoints: {
+      homo: 'https://testdia.afip.gov.ar/Dia/Ws/wGesINV/wGesINV.asmx',
+      prod: 'https://servicios3.arca.gob.ar/Dia/Ws/WGesINV/WGesINV.asmx',
+    },
+    rich: false,
+    activacion: { relacionNombre: 'wgesinv', pasos: pasosActivacion('wgesinv') },
+  },
+  {
+    id: 'wdepmovimientos',
+    nombre: 'Movimientos Ingreso/Egreso Terminales (WDEPMOVIMIENTOS)',
+    descripcion: 'Movimientos de ingreso/egreso en terminales y depositos (aduana).',
+    categoria: 'aduana',
+    wsaaService: 'wdepmovimientos',
+    soapNamespace: 'ar.gov.afip.dia.serviciosWeb.wdepMovimientos.wdepMovimientos',
+    soapActionTemplate: 'ar.gov.afip.dia.serviciosWeb.wdepMovimientos.wdepMovimientos/{op}',
+    endpoints: {
+      homo: 'https://testdia.afip.gov.ar/dia/ws/wdepMovimientos/wdepMovimientos.asmx',
+      prod: 'https://servicios3.arca.gob.ar/dia/ws/wdepMovimientos/wdepMovimientos.asmx',
+    },
+    rich: false,
+    activacion: { relacionNombre: 'wdepmovimientos', pasos: pasosActivacion('wdepmovimientos') },
   },
 ];
 

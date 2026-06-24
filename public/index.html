@@ -238,10 +238,12 @@ async function vServicios(){
   let tenants=[];try{tenants=(await api('/api/tenants')).tenants;}catch{}
   const admin=['superadmin','admin'].includes(ME.role);
   const cuitOpts=tenants.map(t=>`<option value="${t.cuit}">${t.cuit}${t.nombre?' — '+t.nombre:''}</option>`).join('');
-  let html=`<div class="row"><h2 style="margin:0">Servicios de ARCA (${servicios.length})</h2>${admin?'<button class="primary" style="margin-left:auto" onclick="editarServicio()">Agregar servicio</button>':''}</div>
+  let html=`<div class="row"><h2 style="margin:0">Servicios de ARCA (${servicios.length})</h2>
+    <a href="https://www.afip.gob.ar/ws/documentacion/catalogo.asp" target="_blank" rel="noopener" style="margin-left:auto"><button class="ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>Catálogo oficial de ARCA</button></a>
+    ${admin?'<button class="primary" onclick="editarServicio()">Agregar servicio</button>':''}</div>
     <p class="hint">El catálogo se guarda en la base y ${admin?'lo podés editar acá':'lo edita un superadmin'}. Tocá "Cómo activar" para la guía, o "Verificar" para chequear si tu certificado quedó asociado.</p>
     ${cuitOpts?`<div class="row" style="margin:6px 0 4px"><span class="hint">Verificar con el CUIT:</span><select id="verif_cuit" style="max-width:280px">${cuitOpts}</select></div>`:'<p class="hint">Cargá un cliente para poder verificar la asociación.</p>'}`;
-  const orden=['facturacion','consultas','agro','otros'];
+  const orden=['facturacion','consultas','agro','aduana','otros'];
   for(const cat of Object.keys(categorias).sort((a,b)=>orden.indexOf(a)-orden.indexOf(b))){
     html+=`<h3>${cat}</h3>`;
     for(const id of categorias[cat]){const s=servicios.find(x=>x.id===id);if(!s)continue;
