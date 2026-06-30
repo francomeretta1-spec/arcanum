@@ -18,7 +18,7 @@ COPY openapi.yaml ./openapi.yaml
 
 # Volumen persistente: certificados de cada CUIT + cache de tokens.
 RUN mkdir -p /data/certs /data/cache && chown -R node:node /data /app
-VOLUME ["/data"]
+
 
 USER node
 EXPOSE 8094
