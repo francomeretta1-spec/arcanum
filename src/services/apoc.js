@@ -75,12 +75,12 @@ async function consultar(cuitRepresentada, cuitConsulta, entorno) {
     ` xmlns:ws="${NS}">` +
     '<soapenv:Header/><soapenv:Body>' +
     `<ws:${OP}>` +
-    '<credencial>' +
-    `<Token>${ta.token}</Token>` +
-    `<Sign>${ta.sign}</Sign>` +
-    `<CUITDelegado>${repre}</CUITDelegado>` +
-    '</credencial>' +
-    `<cuit>${target}</cuit>` +
+    '<ws:credencial>' +
+    `<ws:Token>${ta.token}</ws:Token>` +
+    `<ws:Sign>${ta.sign}</ws:Sign>` +
+    `<ws:CUITDelegado>${repre}</ws:CUITDelegado>` +
+    '</ws:credencial>' +
+    `<ws:cuit>${target}</ws:cuit>` +
     `</ws:${OP}>` +
     '</soapenv:Body></soapenv:Envelope>';
 
