@@ -27,7 +27,25 @@ function endpoint(entorno) {
 }
 
 function get(src, tag) {
-  const m = src.match(new RegExp('<' + tag + '>([^<]*)</' + tag + '>', 'i'));
+  // ARCA/.NET puede devolver tags con namespaces, por ejemplo:
+  // <a:FechaCondicion>...</a:FechaCondicion> o <FechaCondicion>...</FechaCondicion>.
+  const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(
+    '<(?:[\\w.-]+:)?' + escapedTag + '[^>]*>([^<]*)</(?:[\\w.-]+:)?' + escapedTag + '>',
+    'i'
+  );
+  const m = src.match(re);
+  return m ? m[1].trim() : null;
+}
+
+function getBlock(src, tag) {
+  // Igual que get(), pero captura contenido XML interno y tolera namespaces.
+  const escapedTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(
+    '<(?:[\\w.-]+:)?' + escapedTag + '[^>]*>([\\s\\S]*?)</(?:[\\w.-]+:)?' + escapedTag + '>',
+    'i'
+  );
+  const m = src.match(re);
   return m ? m[1].trim() : null;
 }
 
@@ -83,18 +101,33 @@ async function consultar(cuitRepresentada, cuitConsulta, entorno) {
   const codigo = get(xml, 'Codigo') || get(xml, 'codigo');
   let descripcion = get(xml, 'Descripcion') || get(xml, 'descripcion');
 
-  // Si hay <resultados> con contenido => el CUIT figura como apocrifo.
-  const resultados = xml.match(/<resultados>([\s\S]*?)<\/resultados>/i);
-  const esApocrifo = !!(resultados && resultados[1].trim());
+  // Si hay <resultados> con una PublicacionAPOC vigente => el CUIT figura como apocrifo.
+  // El XML de WSAPOC suele venir con namespaces, por eso NO alcanza con buscar
+  // literalmente <resultados>. Ej.: <a:resultados>...</a:resultados>.
+  const resultados = getBlock(xml, 'resultados');
+  const publicacion = resultados ? getBlock(resultados, 'PublicacionAPOC') || resultados : null;
 
-  let fechaCondicion = null;
-  let fechaPublicacion = null;
-  let detalle = null;
-  if (esApocrifo) {
-    fechaCondicion = get(resultados[1], 'FechaCondicion') || get(resultados[1], 'fechaCondicion');
-    fechaPublicacion = get(resultados[1], 'FechaPublicacion') || get(resultados[1], 'fechaPublicacion');
-    detalle = get(resultados[1], 'Descripcion') || get(resultados[1], 'descripcion');
-  }
+  const fechaCondicion = publicacion
+    ? get(publicacion, 'FechaCondicion') || get(publicacion, 'fechaCondicion')
+    : null;
+  const fechaPublicacion = publicacion
+    ? get(publicacion, 'FechaPublicacion') || get(publicacion, 'fechaPublicacion')
+    : null;
+  const detalle = publicacion
+    ? get(publicacion, 'Descripcion') || get(publicacion, 'descripcion')
+    : null;
+
+  const esApocrifo = !!(
+    publicacion &&
+    (
+      /<(?:[\w.-]+:)?PublicacionAPOC\b/i.test(resultados || '') ||
+      fechaCondicion ||
+      fechaPublicacion ||
+      get(publicacion, 'Cuit') ||
+      get(publicacion, 'CUIT') ||
+      get(publicacion, 'cuit')
+    )
+  );
 
   // Quirk conocido de ARCA: para monotributistas o CUIT sin antecedentes el WS
   // devuelve codigo 201 + "Object reference not set..." en vez de una respuesta
