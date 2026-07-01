@@ -68,21 +68,26 @@ async function consultar(cuitRepresentada, cuitConsulta, entorno) {
 
   const ta = await getAccessTicket(repre, SERVICE, entorno);
 
-  // Formato SOAP estilo .asmx con namespace oficial del servicio.
+  // Formato SOAP segun manual ARCA WSAPOC 1.0.9 (SOAP 1.2):
+  // Los parametros deben ir con namespace `tem:` y la credencial debe llamarse
+  // `Credencial` con C mayuscula. Si va como <credencial> sin namespace, ARCA
+  // responde codigo 201 / Object reference porque no puede leer Token/Sign.
   const envelope =
     '<?xml version="1.0" encoding="UTF-8"?>' +
-    '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"' +
-    ` xmlns:ws="${NS}">` +
-    '<soapenv:Header/><soapenv:Body>' +
-    `<ws:${OP}>` +
-    '<ws:credencial>' +
-    `<ws:Token>${ta.token}</ws:Token>` +
-    `<ws:Sign>${ta.sign}</ws:Sign>` +
-    `<ws:CUITDelegado>${repre}</ws:CUITDelegado>` +
-    '</ws:credencial>' +
-    `<ws:cuit>${target}</ws:cuit>` +
-    `</ws:${OP}>` +
-    '</soapenv:Body></soapenv:Envelope>';
+    '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"' +
+    ` xmlns:tem="${NS}">` +
+    '<soap:Header/>' +
+    '<soap:Body>' +
+    `<tem:${OP}>` +
+    '<tem:Credencial>' +
+    `<tem:Token>${ta.token}</tem:Token>` +
+    `<tem:Sign>${ta.sign}</tem:Sign>` +
+    `<tem:CUITDelegado>${repre}</tem:CUITDelegado>` +
+    '</tem:Credencial>' +
+    `<tem:cuit>${target}</tem:cuit>` +
+    `</tem:${OP}>` +
+    '</soap:Body>' +
+    '</soap:Envelope>';
 
   const url = endpoint(entorno);
   const ctrl = new AbortController();
@@ -91,7 +96,9 @@ async function consultar(cuitRepresentada, cuitConsulta, entorno) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/xml; charset=UTF-8', SOAPAction: `"${NS}${OP}"` },
+      headers: {
+        'Content-Type': `application/soap+xml; charset=UTF-8; action="${NS}${OP}"`,
+      },
       body: envelope,
       signal: ctrl.signal,
     });
